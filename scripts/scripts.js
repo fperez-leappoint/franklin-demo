@@ -122,6 +122,49 @@ function loadDelayed() {
   // load anything that can be postponed to the latest here
 }
 
+/**
+ * Loads Excel File
+*/
+export async function fetchExcel(excelFile, pageSize = 10) {
+  const handleList = async (offset) => {
+    const resp = await fetch(`/${excelFile}.json?limit=${pageSize}&offset=${offset}`);
+    const json = await resp.json();
+
+    const newList = {
+      complete: (json.limit + json.offset) === json.total,
+      offset: json.offset + pageSize,
+      promise: null,
+      data: [...window.list[excelFile].data, ...json.data],
+    };
+
+    return newList;
+  };
+
+  window.list = window.list || {};
+  window.list[excelFile] = window.list[excelFile] || {
+    data: [],
+    offset: 0,
+    complete: false,
+    promise: null,
+  };
+
+  // Return list if already loaded
+  if (window.list[excelFile].complete) {
+    return window.list[excelFile];
+  }
+
+  // Return promise if list is currently loading
+  if (window.list[excelFile].promise) {
+    return window.list[excelFile].promise;
+  }
+
+  window.list[excelFile].promise = handleList(window.list[excelFile].offset);
+  const newList = await (window.list[excelFile].promise);
+  window.list[excelFile] = newList;
+
+  return newList;
+}
+
 async function loadPage() {
   await loadEager(document);
   await loadLazy(document);
